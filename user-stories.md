@@ -87,7 +87,22 @@ These stories capture the experiences of the people who make up our learning com
 
 ---
 
-## 9. THE CURRICULUM DEVELOPER EXPERIENCE
+## 9. THE TEACHER-AS-SYSADMIN EXPERIENCE
+
+*As a CS teacher in a school where IT is one overwhelmed person managing 500 devices...*
+
+- **The Decision Tree:** I want a single guide that tells me — based on my Google Workspace role — whether I can complete setup myself or need to open an IT ticket, so I don't spend a day attempting steps that require admin permissions I don't have.
+- **The IT Email:** I want a pre-written email template I can paste and send to IT that explains exactly what I'm asking for, why it's safe, and what specific permissions or allowlists I need, so my ticket isn't misrouted or ignored.
+- **The One-Pager for IT:** I want a single document I can attach to that email — a concise technical brief covering what data this tool touches, which CDN domains need to be reachable, and what Google APIs are enabled — so IT can make a decision in one sitting instead of playing email tag with me for two weeks.
+- **The Setup Script:** I want a script (or a step-by-step checklist with screenshots) that handles Google Cloud Project creation and API enabling, so I don't have to navigate eight different Google admin consoles and hope I clicked the right things.
+- **The Smoke Test:** I want a simple post-setup checklist I can run in 10 minutes to confirm everything is working before my students show up on Monday, including a test on an actual school Chromebook and a test account, so surprises stay out of classroom time.
+- **The Known-Bad List:** I want a list of the most common setup failures (wrong deployment scope, OAuth screen not published, API quota not enabled) with exact error messages and fixes, so I can self-rescue without opening a new IT ticket for every stumble.
+
+> **Why this persona exists separately:** "The Simple Setup" in §2 describes the ideal — one "Make a Copy" and done. This section captures reality: in most K-12 schools that ideal requires 1-3 humans, 2-10 business days, and institutional knowledge that no one person has. The tool is only as good as its worst-case onboarding path.
+
+---
+
+## 10. THE CURRICULUM DEVELOPER EXPERIENCE
 
 *As a designer of computer science lessons and pathways...*
 
