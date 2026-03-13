@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Commons IDE — P1</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        padding: 16px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      #status {
+        font-size: 14px;
+        opacity: 0.85;
+      }
+      #output {
+        border: 1px solid #8884;
+        border-radius: 8px;
+        padding: 12px;
+        min-height: 100px;
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      button {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #8886;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Commons IDE — Prototype 1</h1>
+    <div class="row">
+      <button id="runBtn" type="button" disabled>Run print('hello')</button>
+      <span id="status">Loading Pyodide…</span>
+    </div>
+    <div id="output" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+    <script>
+      let pyodide;
+
+      const outputEl = document.getElementById('output');
+      const statusEl = document.getElementById('status');
+      const runBtn = document.getElementById('runBtn');
+
+      function appendOutput(text) {
+        outputEl.textContent += text;
+      }
+
+      async function init() {
+        try {
+          pyodide = await loadPyodide();
+          pyodide.setStdout({
+            batched: (msg) => appendOutput(msg + '\n')
+          });
+          statusEl.textContent = 'Pyodide loaded.';
+          runBtn.disabled = false;
+        } catch (err) {
+          statusEl.textContent = 'Failed to load Pyodide.';
+          appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
+        }
+      }
+
+      runBtn.addEventListener('click', async () => {
+        outputEl.textContent = '';
+        statusEl.textContent = 'Running Python…';
+        try {
+          await pyodide.runPythonAsync("print('hello')");
+          statusEl.textContent = 'Done.';
+        } catch (err) {
+          statusEl.textContent = 'Python error.';
+          appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
+        }
+      });
+
+      init();
+    </script>
+  </body>
+</html>
