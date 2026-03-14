@@ -165,14 +165,24 @@
           .replace(/^ {4}/gm, '');
       }
 
-      runBtn.addEventListener('click', async () => {
-        await runPython('Running Python…', "print('hello')");
-      });
+      const TURTLE_SUPPORTED_APIS = [
+        'Turtle',
+        'forward',
+        'right',
+        'left',
+        'penup',
+        'pendown',
+        'goto',
+        'color',
+        'width',
+        'pensize',
+        'speed',
+        'done',
+        'clearscreen',
+        'Screen.bgcolor'
+      ];
 
-      turtleBtn.addEventListener('click', async () => {
-        await runPython(
-          'Running Turtle…',
-    normalizePython(`
+      const TURTLE_SHIM_PY = `
     import sys
     import types
     import math
@@ -261,16 +271,29 @@
       mod.Screen = _Screen
       mod.done = lambda: None
       mod.clearscreen = clear
+      mod.__supported_apis__ = ${JSON.stringify(TURTLE_SUPPORTED_APIS)}
       sys.modules['turtle'] = mod
 
     install_turtle_shim()
+      `;
 
+      const TURTLE_SQUARE_DEMO_PY = `
     import turtle
     t = turtle.Turtle()
     for _ in range(4):
       t.forward(100)
       t.right(90)
-    print('turtle-done')`)
+    print('turtle-done')
+      `;
+
+      runBtn.addEventListener('click', async () => {
+        await runPython('Running Python…', "print('hello')");
+      });
+
+      turtleBtn.addEventListener('click', async () => {
+        await runPython(
+          'Running Turtle…',
+          normalizePython(`${TURTLE_SHIM_PY}\n${TURTLE_SQUARE_DEMO_PY}`)
         );
       });
 
