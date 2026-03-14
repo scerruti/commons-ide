@@ -258,7 +258,15 @@
             __future__: Sk.python3
           });
           if (enableTurtle) {
-            Sk.TurtleGraphics = { target: 'outputCanvas' };
+            const ctx = outputCanvasEl.getContext('2d');
+            ctx.clearRect(0, 0, outputCanvasEl.width, outputCanvasEl.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, outputCanvasEl.width, outputCanvasEl.height);
+            Sk.TurtleGraphics = {
+              target: 'outputCanvas',
+              width: outputCanvasEl.width,
+              height: outputCanvasEl.height
+            };
           }
           await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true));
           statusEl.textContent = 'Done.';
@@ -288,9 +296,13 @@
           normalizePython(`
     import turtle
     t = turtle.Turtle()
+    t.speed(0)
+    t.pensize(4)
+    t.pencolor('#0b7285')
     for _ in range(4):
       t.forward(100)
       t.right(90)
+    turtle.done()
     print('turtle-done')`),
           true
         );
