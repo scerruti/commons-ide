@@ -24,6 +24,18 @@
         font-size: 14px;
         opacity: 0.85;
       }
+      #modeBadge {
+        font-size: 12px;
+        padding: 2px 8px;
+        border: 1px solid #8886;
+        border-radius: 999px;
+        opacity: 0.9;
+      }
+      #modeHelp {
+        margin: 0 0 12px;
+        font-size: 13px;
+        opacity: 0.8;
+      }
       #output {
         border: 1px solid #8884;
         border-radius: 8px;
@@ -43,11 +55,13 @@
   <body>
     <h1>Commons IDE — Prototype 1</h1>
     <div class="row">
+      <span id="modeBadge">Mode: loading…</span>
       <button id="runBtn" type="button" disabled>Run print('hello')</button>
       <button id="turtleBtn" type="button" disabled>Run Turtle square</button>
       <button id="pygameBtn" type="button" disabled>Run Pygame frame</button>
       <span id="status">Loading Pyodide…</span>
     </div>
+    <p id="modeHelp"></p>
     <div id="output" aria-live="polite"></div>
     <canvas id="outputCanvas" width="640" height="360" style="margin-top:12px;border:1px solid #8884;border-radius:8px;background:#fff"></canvas>
 
@@ -57,9 +71,57 @@
 
       const outputEl = document.getElementById('output');
       const statusEl = document.getElementById('status');
+      const modeBadgeEl = document.getElementById('modeBadge');
+      const modeHelpEl = document.getElementById('modeHelp');
       const runBtn = document.getElementById('runBtn');
       const turtleBtn = document.getElementById('turtleBtn');
       const pygameBtn = document.getElementById('pygameBtn');
+      const outputCanvasEl = document.getElementById('outputCanvas');
+
+      function getAssignmentMode() {
+        const mode = new URLSearchParams(window.location.search).get('mode');
+        if (mode === 'text' || mode === 'graphics' || mode === 'game') {
+          return mode;
+        }
+        return 'graphics';
+      }
+
+      const assignmentMode = getAssignmentMode();
+
+      function setVisible(el, visible) {
+        el.style.display = visible ? '' : 'none';
+      }
+
+      function applyAssignmentMode(mode) {
+        modeBadgeEl.textContent = `Mode: ${mode}`;
+
+        if (mode === 'text') {
+          modeHelpEl.textContent = 'Text mode: output panel only; graphics canvas hidden.';
+          setVisible(turtleBtn, false);
+          setVisible(pygameBtn, false);
+          setVisible(outputCanvasEl, false);
+          return;
+        }
+
+        if (mode === 'graphics') {
+          modeHelpEl.textContent = 'Graphics mode: turtle-compatible canvas enabled.';
+          setVisible(turtleBtn, true);
+          setVisible(pygameBtn, false);
+          setVisible(outputCanvasEl, true);
+          outputCanvasEl.width = 640;
+          outputCanvasEl.height = 360;
+          return;
+        }
+
+        modeHelpEl.textContent = 'Game mode (experimental): pygame test enabled; runtime may fail by host.';
+        setVisible(turtleBtn, false);
+        setVisible(pygameBtn, true);
+        setVisible(outputCanvasEl, true);
+        outputCanvasEl.width = 800;
+        outputCanvasEl.height = 450;
+      }
+
+      applyAssignmentMode(assignmentMode);
 
       function appendOutput(text) {
         outputEl.textContent += text;
@@ -76,8 +138,8 @@
           });
           statusEl.textContent = 'Pyodide loaded.';
           runBtn.disabled = false;
-          turtleBtn.disabled = false;
-          pygameBtn.disabled = false;
+          turtleBtn.disabled = assignmentMode !== 'graphics';
+          pygameBtn.disabled = assignmentMode !== 'game';
         } catch (err) {
           statusEl.textContent = 'Failed to load Pyodide.';
           appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
