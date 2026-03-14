@@ -48,6 +48,7 @@
       <span id="status">Loading Pyodide…</span>
     </div>
     <div id="output" aria-live="polite"></div>
+    <canvas id="outputCanvas" width="640" height="360" style="margin-top:12px;border:1px solid #8884;border-radius:8px;background:#fff"></canvas>
 
     <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
     <script>
@@ -96,12 +97,104 @@
       turtleBtn.addEventListener('click', async () => {
         await runPython(
           'Running Turtle…',
-`import turtle
-t = turtle.Turtle()
-for _ in range(4):
-    t.forward(100)
-    t.right(90)
-print('turtle-done')`
+    `import sys
+    import types
+    import math
+    from js import document
+
+    def install_turtle_shim():
+      if 'turtle' in sys.modules:
+        return
+
+      canvas = document.getElementById('outputCanvas')
+      if canvas is None:
+        raise RuntimeError('outputCanvas not found')
+      ctx = canvas.getContext('2d')
+
+      def clear(bg='#ffffff'):
+        ctx.fillStyle = bg
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      clear()
+
+      def to_canvas_coords(x, y):
+        return canvas.width / 2 + x, canvas.height / 2 - y
+
+      class _Screen:
+        def bgcolor(self, color):
+          clear(color)
+
+      class Turtle:
+        def __init__(self):
+          self.x = 0.0
+          self.y = 0.0
+          self.heading = 0.0
+          self.isdown = True
+          self.pencolor = '#0b7285'
+          self.pensize_value = 3
+
+        def _draw_to(self, nx, ny):
+          if self.isdown:
+            x1, y1 = to_canvas_coords(self.x, self.y)
+            x2, y2 = to_canvas_coords(nx, ny)
+            ctx.beginPath()
+            ctx.strokeStyle = self.pencolor
+            ctx.lineWidth = self.pensize_value
+            ctx.moveTo(x1, y1)
+            ctx.lineTo(x2, y2)
+            ctx.stroke()
+          self.x, self.y = nx, ny
+
+        def forward(self, dist):
+          rad = math.radians(self.heading)
+          nx = self.x + dist * math.cos(rad)
+          ny = self.y + dist * math.sin(rad)
+          self._draw_to(nx, ny)
+
+        def right(self, angle):
+          self.heading -= angle
+
+        def left(self, angle):
+          self.heading += angle
+
+        def penup(self):
+          self.isdown = False
+
+        def pendown(self):
+          self.isdown = True
+
+        def goto(self, x, y):
+          self._draw_to(float(x), float(y))
+
+        def color(self, color):
+          self.pencolor = color
+
+        def width(self, w):
+          self.pensize_value = float(w)
+
+        def pensize(self, w=None):
+          if w is None:
+            return self.pensize_value
+          self.pensize_value = float(w)
+
+        def speed(self, *_):
+          return None
+
+      mod = types.ModuleType('turtle')
+      mod.Turtle = Turtle
+      mod.Screen = _Screen
+      mod.done = lambda: None
+      mod.clearscreen = clear
+      sys.modules['turtle'] = mod
+
+    install_turtle_shim()
+
+    import turtle
+    t = turtle.Turtle()
+    for _ in range(4):
+      t.forward(100)
+      t.right(90)
+    print('turtle-done')`
         );
       });
 
