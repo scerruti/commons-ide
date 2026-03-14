@@ -90,6 +90,15 @@
         }
       }
 
+      function dedent(text) {
+        const lines = text.replace(/^\n/, '').split('\n');
+        const nonEmpty = lines.filter((line) => line.trim().length > 0);
+        const minIndent = nonEmpty.length
+          ? Math.min(...nonEmpty.map((line) => (line.match(/^\s*/) || [''])[0].length))
+          : 0;
+        return lines.map((line) => line.slice(minIndent)).join('\n');
+      }
+
       runBtn.addEventListener('click', async () => {
         await runPython('Running Python…', "print('hello')");
       });
@@ -97,7 +106,7 @@
       turtleBtn.addEventListener('click', async () => {
         await runPython(
           'Running Turtle…',
-    `import sys
+    dedent(`import sys
     import types
     import math
     from js import document
@@ -194,7 +203,7 @@
     for _ in range(4):
       t.forward(100)
       t.right(90)
-    print('turtle-done')`
+    print('turtle-done')`)
         );
       });
 
