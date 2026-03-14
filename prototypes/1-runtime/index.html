@@ -226,16 +226,24 @@
     normalizePython(`
     import os
     os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+    os.environ['SDL_VIDEODRIVER'] = 'emscripten'
 
     import micropip
     await micropip.install("pygame-ce")
 
     import asyncio
+    import traceback
     import pygame
     print('pygame-import-ok')
     pygame.init()
     print('pygame-init-ok')
-    screen = pygame.display.set_mode((400, 300))
+    try:
+      screen = pygame.display.set_mode((400, 300))
+    except Exception as e:
+      print('display-mode-failed')
+      print(repr(e))
+      traceback.print_exc()
+      raise
     print('display-mode-ok')
     screen.fill((0, 128, 255))
     pygame.display.flip()
