@@ -1,8 +1,9 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Prototype 1 for Commons IDE: Google Apps Script + Pyodide runtime smoke test." />
     <title>Commons IDE — P1</title>
     <style>
       :root {
@@ -43,6 +44,7 @@
     <h1>Commons IDE — Prototype 1</h1>
     <div class="row">
       <button id="runBtn" type="button" disabled>Run print('hello')</button>
+      <button id="turtleBtn" type="button" disabled>Run Turtle square</button>
       <span id="status">Loading Pyodide…</span>
     </div>
     <div id="output" aria-live="polite"></div>
@@ -54,6 +56,7 @@
       const outputEl = document.getElementById('output');
       const statusEl = document.getElementById('status');
       const runBtn = document.getElementById('runBtn');
+      const turtleBtn = document.getElementById('turtleBtn');
 
       function appendOutput(text) {
         outputEl.textContent += text;
@@ -67,22 +70,39 @@
           });
           statusEl.textContent = 'Pyodide loaded.';
           runBtn.disabled = false;
+          turtleBtn.disabled = false;
         } catch (err) {
           statusEl.textContent = 'Failed to load Pyodide.';
           appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
         }
       }
 
-      runBtn.addEventListener('click', async () => {
+      async function runPython(label, code) {
         outputEl.textContent = '';
-        statusEl.textContent = 'Running Python…';
+        statusEl.textContent = label;
         try {
-          await pyodide.runPythonAsync("print('hello')");
+          await pyodide.runPythonAsync(code);
           statusEl.textContent = 'Done.';
         } catch (err) {
           statusEl.textContent = 'Python error.';
           appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
         }
+      }
+
+      runBtn.addEventListener('click', async () => {
+        await runPython('Running Python…', "print('hello')");
+      });
+
+      turtleBtn.addEventListener('click', async () => {
+        await runPython(
+          'Running Turtle…',
+`import turtle
+t = turtle.Turtle()
+for _ in range(4):
+    t.forward(100)
+    t.right(90)
+print('turtle-done')`
+        );
       });
 
       init();
