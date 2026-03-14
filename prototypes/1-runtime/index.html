@@ -77,9 +77,10 @@
       const turtleBtn = document.getElementById('turtleBtn');
       const pygameBtn = document.getElementById('pygameBtn');
       const outputCanvasEl = document.getElementById('outputCanvas');
+      const serverMode = '<?= serverMode ?>';
 
       function getAssignmentMode() {
-        const mode = new URLSearchParams(window.location.search).get('mode');
+        const mode = (serverMode || new URLSearchParams(window.location.search).get('mode') || '').toLowerCase();
         if (mode === 'text' || mode === 'graphics' || mode === 'game') {
           return mode;
         }
