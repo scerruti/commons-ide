@@ -65,9 +65,10 @@
     <div id="output" aria-live="polite"></div>
     <canvas id="outputCanvas" width="640" height="360" style="margin-top:12px;border:1px solid #8884;border-radius:8px;background:#fff"></canvas>
 
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
     <script>
       let pyodide;
+      let pyodideReady = false;
+      let skulptReady = false;
 
       const outputEl = document.getElementById('output');
       const statusEl = document.getElementById('status');
@@ -81,7 +82,7 @@
 
       function getAssignmentMode() {
         const mode = (serverMode || new URLSearchParams(window.location.search).get('mode') || '').toLowerCase();
-        if (mode === 'text' || mode === 'graphics' || mode === 'game') {
+        if (mode === 'text' || mode === 'text-advanced' || mode === 'graphics' || mode === 'game') {
           return mode;
         }
         return 'graphics';
@@ -97,7 +98,17 @@
         modeBadgeEl.textContent = `Mode: ${mode}`;
 
         if (mode === 'text') {
-          modeHelpEl.textContent = 'Text mode: output panel only; graphics canvas hidden.';
+          modeHelpEl.textContent = 'Text mode (fast): Skulpt runtime, output panel only, limited imports.';
+          setVisible(runBtn, true);
+          setVisible(turtleBtn, false);
+          setVisible(pygameBtn, false);
+          setVisible(outputCanvasEl, false);
+          return;
+        }
+
+        if (mode === 'text-advanced') {
+          modeHelpEl.textContent = 'Advanced text mode: Pyodide runtime, broader Python package support.';
+          setVisible(runBtn, true);
           setVisible(turtleBtn, false);
           setVisible(pygameBtn, false);
           setVisible(outputCanvasEl, false);
@@ -105,7 +116,8 @@
         }
 
         if (mode === 'graphics') {
-          modeHelpEl.textContent = 'Graphics mode: turtle-compatible canvas enabled.';
+          modeHelpEl.textContent = 'Graphics mode: Skulpt turtle canvas enabled.';
+          setVisible(runBtn, false);
           setVisible(turtleBtn, true);
           setVisible(pygameBtn, false);
           setVisible(outputCanvasEl, true);
@@ -115,6 +127,7 @@
         }
 
         modeHelpEl.textContent = 'Game mode (experimental): pygame test enabled; runtime may fail by host.';
+  setVisible(runBtn, false);
         setVisible(turtleBtn, false);
         setVisible(pygameBtn, true);
         setVisible(outputCanvasEl, true);
@@ -128,34 +141,130 @@
         outputEl.textContent += text;
       }
 
+      function clearOutput() {
+        outputEl.textContent = '';
+      }
+
+      function scriptTagId(url) {
+        return `script-${btoa(url).replace(/=/g, '')}`;
+      }
+
+      function loadScriptOnce(url) {
+        return new Promise((resolve, reject) => {
+          const existing = document.getElementById(scriptTagId(url));
+          if (existing) {
+            if (existing.dataset.loaded === 'true') {
+              resolve();
+              return;
+            }
+            existing.addEventListener('load', () => resolve(), { once: true });
+            existing.addEventListener('error', () => reject(new Error(`Failed to load ${url}`)), { once: true });
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.id = scriptTagId(url);
+          script.src = url;
+          script.async = true;
+          script.onload = () => {
+            script.dataset.loaded = 'true';
+            resolve();
+          };
+          script.onerror = () => reject(new Error(`Failed to load ${url}`));
+          document.head.appendChild(script);
+        });
+      }
+
+      async function initSkulpt() {
+        if (skulptReady) {
+          return;
+        }
+        statusEl.textContent = 'Loading Skulpt…';
+        await loadScriptOnce('https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js');
+        await loadScriptOnce('https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js');
+        skulptReady = true;
+      }
+
+      async function initPyodideRuntime() {
+        if (pyodideReady) {
+          return;
+        }
+        statusEl.textContent = 'Loading Pyodide…';
+        await loadScriptOnce('https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js');
+        pyodide = await loadPyodide();
+        pyodide.setStdout({
+          batched: (msg) => appendOutput(msg + '\n')
+        });
+        pyodide.setStderr({
+          batched: (msg) => appendOutput(msg + '\n')
+        });
+        pyodideReady = true;
+      }
+
       async function init() {
         try {
-          pyodide = await loadPyodide();
-          pyodide.setStdout({
-            batched: (msg) => appendOutput(msg + '\n')
-          });
-          pyodide.setStderr({
-            batched: (msg) => appendOutput(msg + '\n')
-          });
-          statusEl.textContent = 'Pyodide loaded.';
-          runBtn.disabled = false;
-          turtleBtn.disabled = assignmentMode !== 'graphics';
-          pygameBtn.disabled = assignmentMode !== 'game';
+          if (assignmentMode === 'text' || assignmentMode === 'graphics') {
+            await initSkulpt();
+            statusEl.textContent = 'Skulpt loaded.';
+            runBtn.disabled = assignmentMode !== 'text';
+            turtleBtn.disabled = assignmentMode !== 'graphics';
+            pygameBtn.disabled = true;
+          } else {
+            await initPyodideRuntime();
+            statusEl.textContent = 'Pyodide loaded.';
+            runBtn.disabled = assignmentMode !== 'text-advanced';
+            turtleBtn.disabled = true;
+            pygameBtn.disabled = assignmentMode !== 'game';
+          }
         } catch (err) {
-          statusEl.textContent = 'Failed to load Pyodide.';
+          statusEl.textContent = 'Runtime load failed.';
           appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
         }
       }
 
       async function runPython(label, code) {
-        outputEl.textContent = '';
+        clearOutput();
         statusEl.textContent = label;
         try {
+          if (!pyodideReady) {
+            await initPyodideRuntime();
+          }
           await pyodide.runPythonAsync(code);
           statusEl.textContent = 'Done.';
         } catch (err) {
           statusEl.textContent = 'Python error.';
           appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
+        }
+      }
+
+      function skulptRead(filename) {
+        if (!window.Sk || !Sk.builtinFiles || !Sk.builtinFiles.files[filename]) {
+          throw new Error(`Skulpt stdlib missing: ${filename}`);
+        }
+        return Sk.builtinFiles.files[filename];
+      }
+
+      async function runSkulpt(label, code, enableTurtle = false) {
+        clearOutput();
+        statusEl.textContent = label;
+        try {
+          if (!skulptReady) {
+            await initSkulpt();
+          }
+          Sk.pre = 'output';
+          Sk.configure({
+            output: (text) => appendOutput(text),
+            read: skulptRead,
+            __future__: Sk.python3
+          });
+          if (enableTurtle) {
+            Sk.TurtleGraphics = { target: 'outputCanvas' };
+          }
+          await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true));
+          statusEl.textContent = 'Done.';
+        } catch (err) {
+          statusEl.textContent = 'Python error.';
+          appendOutput((err && err.toString) ? err.toString() + '\n' : String(err) + '\n');
         }
       }
 
@@ -165,141 +274,34 @@
           .replace(/^ {4}/gm, '');
       }
 
-      const TURTLE_SUPPORTED_APIS = [
-        'Turtle',
-        'forward',
-        'right',
-        'left',
-        'penup',
-        'pendown',
-        'goto',
-        'color',
-        'width',
-        'pensize',
-        'speed',
-        'done',
-        'clearscreen',
-        'Screen.bgcolor'
-      ];
+      runBtn.addEventListener('click', async () => {
+        if (assignmentMode === 'text') {
+          await runSkulpt('Running Python…', "print('hello from skulpt')");
+          return;
+        }
+        await runPython('Running Python…', "import math\nprint('hello from pyodide')\nprint(math.sqrt(144))");
+      });
 
-      const TURTLE_SHIM_PY = `
-    import sys
-    import types
-    import math
-    from js import document
-
-    def install_turtle_shim():
-      if 'turtle' in sys.modules:
-        return
-
-      canvas = document.getElementById('outputCanvas')
-      if canvas is None:
-        raise RuntimeError('outputCanvas not found')
-      ctx = canvas.getContext('2d')
-
-      def clear(bg='#ffffff'):
-        ctx.fillStyle = bg
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      clear()
-
-      def to_canvas_coords(x, y):
-        return canvas.width / 2 + x, canvas.height / 2 - y
-
-      class _Screen:
-        def bgcolor(self, color):
-          clear(color)
-
-      class Turtle:
-        def __init__(self):
-          self.x = 0.0
-          self.y = 0.0
-          self.heading = 0.0
-          self.isdown = True
-          self.pencolor = '#0b7285'
-          self.pensize_value = 3
-
-        def _draw_to(self, nx, ny):
-          if self.isdown:
-            x1, y1 = to_canvas_coords(self.x, self.y)
-            x2, y2 = to_canvas_coords(nx, ny)
-            ctx.beginPath()
-            ctx.strokeStyle = self.pencolor
-            ctx.lineWidth = self.pensize_value
-            ctx.moveTo(x1, y1)
-            ctx.lineTo(x2, y2)
-            ctx.stroke()
-          self.x, self.y = nx, ny
-
-        def forward(self, dist):
-          rad = math.radians(self.heading)
-          nx = self.x + dist * math.cos(rad)
-          ny = self.y + dist * math.sin(rad)
-          self._draw_to(nx, ny)
-
-        def right(self, angle):
-          self.heading -= angle
-
-        def left(self, angle):
-          self.heading += angle
-
-        def penup(self):
-          self.isdown = False
-
-        def pendown(self):
-          self.isdown = True
-
-        def goto(self, x, y):
-          self._draw_to(float(x), float(y))
-
-        def color(self, color):
-          self.pencolor = color
-
-        def width(self, w):
-          self.pensize_value = float(w)
-
-        def pensize(self, w=None):
-          if w is None:
-            return self.pensize_value
-          self.pensize_value = float(w)
-
-        def speed(self, *_):
-          return None
-
-      mod = types.ModuleType('turtle')
-      mod.Turtle = Turtle
-      mod.Screen = _Screen
-      mod.done = lambda: None
-      mod.clearscreen = clear
-      mod.__supported_apis__ = ${JSON.stringify(TURTLE_SUPPORTED_APIS)}
-      sys.modules['turtle'] = mod
-
-    install_turtle_shim()
-      `;
-
-      const TURTLE_SQUARE_DEMO_PY = `
+      turtleBtn.addEventListener('click', async () => {
+        await runSkulpt(
+          'Running Turtle…',
+          normalizePython(`
     import turtle
     t = turtle.Turtle()
     for _ in range(4):
       t.forward(100)
       t.right(90)
-    print('turtle-done')
-      `;
-
-      runBtn.addEventListener('click', async () => {
-        await runPython('Running Python…', "print('hello')");
-      });
-
-      turtleBtn.addEventListener('click', async () => {
-        await runPython(
-          'Running Turtle…',
-          normalizePython(`${TURTLE_SHIM_PY}\n${TURTLE_SQUARE_DEMO_PY}`)
+    print('turtle-done')`),
+          true
         );
       });
 
       pygameBtn.addEventListener('click', async () => {
         statusEl.textContent = 'Loading micropip…';
         try {
+          if (!pyodideReady) {
+            await initPyodideRuntime();
+          }
           await pyodide.loadPackage('micropip');
         } catch (err) {
           statusEl.textContent = 'Package load error.';
