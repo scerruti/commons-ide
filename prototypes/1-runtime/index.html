@@ -90,13 +90,10 @@
         }
       }
 
-      function dedent(text) {
-        const lines = text.replace(/^\n/, '').split('\n');
-        const nonEmpty = lines.filter((line) => line.trim().length > 0);
-        const minIndent = nonEmpty.length
-          ? Math.min(...nonEmpty.map((line) => (line.match(/^\s*/) || [''])[0].length))
-          : 0;
-        return lines.map((line) => line.slice(minIndent)).join('\n');
+      function normalizePython(text) {
+        return text
+          .replace(/^\n/, '')
+          .replace(/^ {4}/gm, '');
       }
 
       runBtn.addEventListener('click', async () => {
@@ -106,7 +103,7 @@
       turtleBtn.addEventListener('click', async () => {
         await runPython(
           'Running Turtle…',
-    dedent(`
+    normalizePython(`
     import sys
     import types
     import math
