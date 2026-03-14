@@ -209,6 +209,15 @@
       });
 
       pygameBtn.addEventListener('click', async () => {
+        statusEl.textContent = 'Loading micropip…';
+        try {
+          await pyodide.loadPackage('micropip');
+        } catch (err) {
+          statusEl.textContent = 'Package load error.';
+          appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
+          return;
+        }
+
         await runPython(
           'Running Pygame…',
     normalizePython(`
