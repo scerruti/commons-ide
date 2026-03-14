@@ -71,6 +71,9 @@
           pyodide.setStdout({
             batched: (msg) => appendOutput(msg + '\n')
           });
+          pyodide.setStderr({
+            batched: (msg) => appendOutput(msg + '\n')
+          });
           statusEl.textContent = 'Pyodide loaded.';
           runBtn.disabled = false;
           turtleBtn.disabled = false;
@@ -221,14 +224,22 @@
         await runPython(
           'Running Pygame…',
     normalizePython(`
+    import os
+    os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
     import micropip
     await micropip.install("pygame-ce")
 
+    import asyncio
     import pygame
+    print('pygame-import-ok')
     pygame.init()
+    print('pygame-init-ok')
     screen = pygame.display.set_mode((400, 300))
+    print('display-mode-ok')
     screen.fill((0, 128, 255))
     pygame.display.flip()
+    await asyncio.sleep(0.25)
     print('pygame-done')`)
         );
       });
