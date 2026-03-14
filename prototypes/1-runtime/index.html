@@ -45,6 +45,7 @@
     <div class="row">
       <button id="runBtn" type="button" disabled>Run print('hello')</button>
       <button id="turtleBtn" type="button" disabled>Run Turtle square</button>
+      <button id="pygameBtn" type="button" disabled>Run Pygame frame</button>
       <span id="status">Loading Pyodide…</span>
     </div>
     <div id="output" aria-live="polite"></div>
@@ -58,6 +59,7 @@
       const statusEl = document.getElementById('status');
       const runBtn = document.getElementById('runBtn');
       const turtleBtn = document.getElementById('turtleBtn');
+      const pygameBtn = document.getElementById('pygameBtn');
 
       function appendOutput(text) {
         outputEl.textContent += text;
@@ -72,6 +74,7 @@
           statusEl.textContent = 'Pyodide loaded.';
           runBtn.disabled = false;
           turtleBtn.disabled = false;
+          pygameBtn.disabled = false;
         } catch (err) {
           statusEl.textContent = 'Failed to load Pyodide.';
           appendOutput((err && err.message) ? err.message + '\n' : String(err) + '\n');
@@ -202,6 +205,22 @@
       t.forward(100)
       t.right(90)
     print('turtle-done')`)
+        );
+      });
+
+      pygameBtn.addEventListener('click', async () => {
+        await runPython(
+          'Running Pygame…',
+    normalizePython(`
+    import micropip
+    await micropip.install("pygame-ce")
+
+    import pygame
+    pygame.init()
+    screen = pygame.display.set_mode((400, 300))
+    screen.fill((0, 128, 255))
+    pygame.display.flip()
+    print('pygame-done')`)
         );
       });
 
