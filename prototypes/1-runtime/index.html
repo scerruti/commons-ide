@@ -63,6 +63,7 @@
     </div>
     <p id="modeHelp"></p>
     <div id="output" aria-live="polite"></div>
+    <div id="turtleContainer" style="display:none;margin-top:12px;border:1px solid #8884;border-radius:8px;background:#fff;width:640px;height:360px;overflow:hidden"></div>
     <canvas id="outputCanvas" width="640" height="360" style="margin-top:12px;border:1px solid #8884;border-radius:8px;background:#fff"></canvas>
 
     <script>
@@ -77,6 +78,7 @@
       const runBtn = document.getElementById('runBtn');
       const turtleBtn = document.getElementById('turtleBtn');
       const pygameBtn = document.getElementById('pygameBtn');
+      const turtleContainerEl = document.getElementById('turtleContainer');
       const outputCanvasEl = document.getElementById('outputCanvas');
       const serverMode = '<?= serverMode ?>';
 
@@ -102,6 +104,7 @@
           setVisible(runBtn, true);
           setVisible(turtleBtn, false);
           setVisible(pygameBtn, false);
+          setVisible(turtleContainerEl, false);
           setVisible(outputCanvasEl, false);
           return;
         }
@@ -111,6 +114,7 @@
           setVisible(runBtn, true);
           setVisible(turtleBtn, false);
           setVisible(pygameBtn, false);
+          setVisible(turtleContainerEl, false);
           setVisible(outputCanvasEl, false);
           return;
         }
@@ -120,9 +124,10 @@
           setVisible(runBtn, false);
           setVisible(turtleBtn, true);
           setVisible(pygameBtn, false);
-          setVisible(outputCanvasEl, true);
-          outputCanvasEl.width = 640;
-          outputCanvasEl.height = 360;
+          setVisible(turtleContainerEl, true);
+          setVisible(outputCanvasEl, false);
+          turtleContainerEl.style.width = '640px';
+          turtleContainerEl.style.height = '360px';
           return;
         }
 
@@ -130,6 +135,7 @@
   setVisible(runBtn, false);
         setVisible(turtleBtn, false);
         setVisible(pygameBtn, true);
+        setVisible(turtleContainerEl, false);
         setVisible(outputCanvasEl, true);
         outputCanvasEl.width = 800;
         outputCanvasEl.height = 450;
@@ -258,17 +264,16 @@
             __future__: Sk.python3
           });
           if (enableTurtle) {
-            const ctx = outputCanvasEl.getContext('2d');
-            ctx.clearRect(0, 0, outputCanvasEl.width, outputCanvasEl.height);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, outputCanvasEl.width, outputCanvasEl.height);
+            turtleContainerEl.innerHTML = '';
             Sk.TurtleGraphics = {
-              target: 'outputCanvas',
-              width: outputCanvasEl.width,
-              height: outputCanvasEl.height
+              target: 'turtleContainer',
+              width: 640,
+              height: 360
             };
           }
+          appendOutput('skulpt-run-start\n');
           await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true));
+          appendOutput('skulpt-run-end\n');
           statusEl.textContent = 'Done.';
         } catch (err) {
           statusEl.textContent = 'Python error.';
@@ -294,6 +299,7 @@
         await runSkulpt(
           'Running Turtle…',
           normalizePython(`
+            print('turtle-start')
     import turtle
     t = turtle.Turtle()
     t.speed(0)
